@@ -11,70 +11,103 @@
 #include <cstring>
 #include <string>
 
-
-struct charDotMatrix{
-    char** dotMatrix;
-};
-
-struct rowCharsSelection{
-    int row;
+struct charSelection{
+    int row,col;
+    char charDescription[5];
     int charWidth;    //{width, height}
     int charHeight;
-    struct charDotMatrix *charVector;
+    char *dotMatrix;
 };
+
 using namespace std;
 void readBMP(string, char**);
 void bmp_vector(string);
-void retrieveRowSelection(rowCharsSelection row, char **dotMatrix);
+void retrieveCharSelection(charSelection,char**);
+void printCharSelection(charSelection);
+//void digitTrainingVectorInit(charSelection**,int,int);
+//void digitVectorInit(charSelection *,int,int);
 
 int main(int argc, char** argv) {
     
     string imageName = "",fullPath ="images/";
     char** dotMatrix; //Para generar la matriz dinámica
-    rowCharsSelection rowSelection[2] = {
-        {4,32,32,new charDotMatrix[16]},
-        {5,32,32,new charDotMatrix[16]}
-    };
+    int width =32, height = 32;
+    charSelection chars= {4,2,"0",width,height,new char[width*height]};
+    int dotVectorSize = width*height;
+    charSelection digitVector1[10]= {
+            {4,1,"0",width,height,new char[dotVectorSize]},
+            {4,2,"1",width,height,new char[dotVectorSize]},
+            {4,3,"2",width,height,new char[dotVectorSize]},
+            {4,4,"3",width,height,new char[dotVectorSize]},
+            {4,5,"4",width,height,new char[dotVectorSize]},
+            {4,6,"5",width,height,new char[dotVectorSize]},
+            {4,7,"6",width,height,new char[dotVectorSize]},
+            {4,8,"7",width,height,new char[dotVectorSize]},
+            {4,9,"8",width,height,new char[dotVectorSize]},
+            {4,10,"9",width,height,new char[dotVectorSize]},
+        };
+    charSelection digitVector2[10]= {
+            {4,1,"0",width,height,new char[dotVectorSize]},
+            {4,2,"1",width,height,new char[dotVectorSize]},
+            {4,3,"2",width,height,new char[dotVectorSize]},
+            {4,4,"3",width,height,new char[dotVectorSize]},
+            {4,5,"4",width,height,new char[dotVectorSize]},
+            {4,6,"5",width,height,new char[dotVectorSize]},
+            {4,7,"6",width,height,new char[dotVectorSize]},
+            {4,8,"7",width,height,new char[dotVectorSize]},
+            {4,9,"8",width,height,new char[dotVectorSize]},
+            {4,10,"9",width,height,new char[dotVectorSize]},
+        };
+    charSelection *digitsVector[2];
+    digitsVector = new charSelection*[2] = {digitVector1,digitVector2};
     
+    
+    //digitTrainingVectorInit(digitsVector,width,height);
     cout << "Introduce el nombre del archivo fuente (*.bmp) en la ruta ../images/: ";
     cin >> imageName;
     fullPath+= imageName+".bmp";    //Ruta completa del archivo
     
     readBMP(fullPath, dotMatrix); //Obtener la imagen en una matriz de puntos
-    retrieveRowSelection(rowSelection[0],dotMatrix);
+    retrieveCharSelection(digitsVector[1][3],dotMatrix);
+    //retrieveCharSelection(chars,dotMatrix);
     //Solo para ver si funciona esta cosa :P
-    for(int i = 0; i<32*8; i++)
-    {
-        for(int j=0;j<32*5;j++)
-        {
-            cout << dotMatrix[i][j];
-        }
-        cout << endl;
-    }
+    printCharSelection(digitsVector[1][3]);
+    
+    
+    
+    
     return 0;
 }
 
-void retrieveRowSelection(rowCharsSelection row, char **dotMatrix){
-    int matrixRowInit = row.charHeight*(row.row-1); //Equivalente en la fila de la matriz
-    int matrixRowEnd = matrixRowInit + row.charHeight;//Fila final de la búsqueda
-    char matrix[32][32];
-    for(int i = matrixRowInit; i < matrixRowEnd ; i++)
+
+void printCharSelection(charSelection charSelected){
+    int endDotVector = charSelected.charHeight*charSelected.charWidth;
+    for(int i = 0; i<endDotVector; i++)
     {
-        for(int x = 0; x<15;x++)
-        {
-            ofstream fileOutput;
-            string filename = "fontFiles/char.txt";
-            fileOutput.open(filename.c_str());
-            int ref = 32*x;
-            string content= "";
-            for(int j=ref; j<(ref+32);j++)
-                 content += dotMatrix[i][j];
-            fileOutput<<content<<endl;
-            
-        }
+        cout << charSelected.dotMatrix[i];
+        if((i%charSelected.charWidth) ==0)
+            cout << endl;
     }
 }
 
+
+void retrieveCharSelection(charSelection charSelected, char **dotMatrix){
+    int matrixRowInit = charSelected.charHeight*(charSelected.row-1); //Equivalente en la fila de la matriz
+    int matrixRowEnd = matrixRowInit + charSelected.charHeight;//Fila final de la búsqueda
+    int matrixColInit = charSelected.charWidth*(charSelected.col-1); //Equivalente en la fila de la matriz
+    int matrixColEnd = matrixColInit + charSelected.charWidth;//Fila final de la búsqueda
+    //row.dotMatrix = new char[row.charWidth*row.charHeight];
+    int index =0;
+    for(int i = matrixRowInit; i < matrixRowEnd ; i++)
+    {
+        
+        for(int j=matrixColInit; j<matrixColEnd;j++)
+        {
+             charSelected.dotMatrix[index] = dotMatrix[i][j];
+             index++;
+        }
+    }
+}
 
 
 void readBMP(string filename, char** dotMatrix)
@@ -127,7 +160,7 @@ void readBMP(string filename, char** dotMatrix)
             else
                 dotMatrix[width-i-1][(int)j/3] = '*';
         }
-        cout<<endl;
+//        cout<<endl;
     }
     fclose(f);
 }
