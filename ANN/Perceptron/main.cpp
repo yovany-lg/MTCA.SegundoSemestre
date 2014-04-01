@@ -10,6 +10,15 @@
 #include <iostream>
 #include <cstring>
 #include <string>
+#include <sstream>
+
+//Un patch para soportar la función to_string
+template <typename T> std::string to_string(T value)
+{
+	std::ostringstream os ;
+	os << value ;
+	return os.str() ;
+}
 
 struct charSelection{
     int row,col;
@@ -21,18 +30,20 @@ struct charSelection{
 
 using namespace std;
 
-void readBMP(string, char**);
+void readBMP(string filename, char*** dotMatrix);
 void bmp_vector(string);
-void retrieveCharSelection(charSelection,char**);
+void retrieveCharSelection(charSelection *charSelected, char **dotMatrix);
 void printCharSelection(charSelection);
 void freeDotMatrixMem(char**);
-void perceptronInit(int *,int **, int *, int , int);
-void trainNeuralNetwork(int *,int **,int *,int ,int ,int ,int );
-void weightUpdates(int ,int ,int *,int *,int ,int );
-int outputByUnit(int *,int *,int );
+
+void perceptronInit(int **inputVector,int ***weightMatrix, int **desired, int inputs, int neurons);
+void trainNeuralNetwork(int **inputVector,int **weightMatrix,int **desired,int rate,int inputs,int neurons,int threshold);
+void weightUpdates(int response,int desired,int **inputVector,int **weightVector,int rate,int inputs);
+int outputByUnit(int **inputVector,int **weightVector,int inputs);
 int activationFunction(int ,int );
-void getPatternVector(charSelection ,int *,int );
-void getDesiredOutput(int *,int ,int );
+void getPatternVector(charSelection *pattern,int **inputVector,int inputs);
+void getDesiredOutput(int **desired,int neurons,int current);
+string weightVectorToString(int **weightVector,int inputs);
 //void digitTrainingVectorInit(charSelection**,int,int);
 //void digitVectorInit(charSelection *,int,int);
 
@@ -47,7 +58,7 @@ int main(int argc, char** argv) {
         digit5= {4,5,"0",width,height,new int[dotVectorSize]},digit6= {4,6,"0",width,height,new int[dotVectorSize]},
         digit7= {4,7,"0",width,height,new int[dotVectorSize]},digit8= {4,8,"0",width,height,new int[dotVectorSize]},
         digit9= {4,9,"0",width,height,new int[dotVectorSize]},digit10= {4,10,"0",width,height,new int[dotVectorSize]};
-    charSelection charA= {5,2,"0",width,height,new int[dotVectorSize]},charB= {5,3,"0",width,height,new int[dotVectorSize]},
+/*    charSelection charA= {5,2,"0",width,height,new int[dotVectorSize]},charB= {5,3,"0",width,height,new int[dotVectorSize]},
         charC= {5,4,"0",width,height,new int[dotVectorSize]},charD= {5,5,"0",width,height,new int[dotVectorSize]},
         charE= {5,6,"0",width,height,new int[dotVectorSize]},charF= {5,7,"0",width,height,new int[dotVectorSize]},
         charG= {5,8,"0",width,height,new int[dotVectorSize]},charH= {5,9,"0",width,height,new int[dotVectorSize]},
@@ -72,95 +83,98 @@ int main(int argc, char** argv) {
         char_s= {4,2,"0",width,height,new int[dotVectorSize]},char_t= {8,5,"0",width,height,new int[dotVectorSize]},
         char_u= {4,2,"0",width,height,new int[dotVectorSize]},char_v= {8,7,"0",width,height,new int[dotVectorSize]},
         char_w= {4,2,"0",width,height,new int[dotVectorSize]},char_x= {8,9,"0",width,height,new int[dotVectorSize]},
-        char_y= {4,2,"0",width,height,new int[dotVectorSize]},char_z= {8,11,"0",width,height,new int[dotVectorSize]};
+        char_y= {4,2,"0",width,height,new int[dotVectorSize]},char_z= {8,11,"0",width,height,new int[dotVectorSize]};*/
     charSelection * digitVector[10] = {&digit1,&digit2,&digit3,&digit4,&digit5,&digit6,&digit7,&digit8,&digit9,&digit10};
-    charSelection * upperCharVector[26] = {&charA,&charB,&charC,&charD,&charE,&charF,&charG,&charH,&charI,&charJ,&
+    /*charSelection * upperCharVector[26] = {&charA,&charB,&charC,&charD,&charE,&charF,&charG,&charH,&charI,&charJ,&
         charK,&charL,&charM,&charN,&charO,&charP,&charQ,&charR,&charS,&charT,&charU,&charV,&charW,&charX,&charY,&charZ};
     charSelection * lowerCharVector[26] = {&char_a,&char_b,&char_c,&char_d,&char_e,&char_f,&char_g,&char_h,&char_i,&char_j,
-        &char_k,&char_l,&char_m,&char_n,&char_o,&char_p,&char_q,&char_r,&char_s,&char_t,&char_u,&char_v,&char_w,&char_x,&char_y,&char_z};
+        &char_k,&char_l,&char_m,&char_n,&char_o,&char_p,&char_q,&char_r,&char_s,&char_t,&char_u,&char_v,&char_w,&char_x,&char_y,&char_z};*/
 
     cout << "Introduce el nombre del archivo \"*.bmp\" en la ruta \"../images/\" para entrenamiento: ";
     cin >> imageName;
     fullPath+= imageName+".bmp";    //Ruta completa del archivo
 
-    readBMP(fullPath, dotMatrix); //Obtener la imagen en una matriz de puntos
-    //retrieveCharSelection(*(lowerCharVector[15]),dotMatrix);
-    //printCharSelection(*(lowerCharVector[15]));        
+    readBMP(fullPath, &dotMatrix); //Obtener la imagen en una matriz de puntos
 
-    int **inputVector,**weightMatrix,**desired,inputs=32*32,neurons=7,rate = 1,threshold =0;
+    int *inputVector,**weightMatrix,*desired,inputs=32*32,neurons=3,learningRate = 1,threshold =0;
 
-    perceptronInit(*inputVector,weightMatrix,*desired,inputs,neurons);
-    
+    perceptronInit(&inputVector,&weightMatrix,&desired,inputs,neurons);
+
+    cout<<"\n---Entrenando Red Neuronal---\n";
+
     for(int i = 0;i < neurons;i++){
-        retrieveCharSelection(*(digitVector[i]),dotMatrix);
-        getPatternVector(*(digitVector[i]),*inputVector,inputs);
-        getDesiredOutput(*desired,neurons,i);
-        trainNeuralNetwork(*inputVector,weightMatrix,*desired,rate,inputs,neurons,threshold);
+        retrieveCharSelection(digitVector[i],dotMatrix);
+        cout<<"\n--Patron de Entrenamiento\n";
+        printCharSelection(*(digitVector[i]));
+        getPatternVector(digitVector[i],&inputVector,inputs);
+        getDesiredOutput(&desired,neurons,i);
+        trainNeuralNetwork(&inputVector,weightMatrix,&desired,learningRate,inputs,neurons,threshold);
     }
     
     return 0;
 }
 
-void perceptronInit(int *inputVector,int **weightMatrix, int *desired, int inputs, int neurons){
-    inputVector = new int[inputs+1];
-    inputVector[0] = 1; //Entrada por defecto en la primera posicion
-    weightMatrix = new int*[neurons]; 
+void perceptronInit(int **inputVector,int ***weightMatrix, int **desired, int inputs, int neurons){
+    *inputVector = new int[inputs+1];
+    (*inputVector)[0] = 1; //Entrada por defecto en la primera posicion
+    *desired = new int[neurons];//Respuesta deseada en base a las clases
+    *weightMatrix = new int*[neurons]; 
     for(int i = 0 ; i<neurons;i++)
     {
-        weightMatrix[i] = new int[inputs+1]; //Considerando el bias en la primera posicion
+        (*desired)[i] = 0;
+        (*weightMatrix)[i] = new int[inputs+1]; //Considerando el bias en la primera posicion
         for(int j = 0; j<(inputs+1);j++)
-            weightMatrix[i][j]=0;   //Inicializacion de los pesos y el bias
+            (*weightMatrix)[i][j]=0;   //Inicializacion de los pesos y el bias
     }
-    desired = new int[neurons];//Respuesta deseada en base a las clases
 }
 
-void getPatternVector(charSelection pattern,int *inputVector,int inputs){
-    for(int i =0;i<inputs;i++)  
-        inputVector[i+1] = pattern.dotVector[i];//Se omite la entrada por default (bias)
+void getPatternVector(charSelection *pattern,int **inputVector,int inputs){
+    for(int index = 0;index<inputs;index++)  
+        (*inputVector)[index+1] = (*pattern).dotVector[index];//Se omite la entrada por default (bias)
 }
 
-void getDesiredOutput(int *desired,int neurons,int current){
-    for(int i =0;i<neurons;i++)
+void getDesiredOutput(int **desired,int neurons,int current){
+    for(int y = 0; y < neurons; y++)
     {
-        if(i != current)
-            desired[i] == -1;
+        if(y == current)
+            (*desired)[y] = 1;
         else
-            desired[i] == 1;
-        
+            (*desired)[y] = -1;
     }
 }
 
-void trainNeuralNetwork(int *inputVector,int **weightMatrix,int *desired,int rate,int inputs,int neurons,int threshold){
+void trainNeuralNetwork(int **inputVector,int **weightMatrix,int **desired,int rate,int inputs,int neurons,int threshold){
     int y_outByUnit,response;
     for(int i = 0; i<neurons;i++){
-        y_outByUnit = outputByUnit(inputVector,weightMatrix[i],inputs);
+        y_outByUnit = outputByUnit(inputVector,&(weightMatrix[i]),inputs);
         response = activationFunction(y_outByUnit,threshold);
-        weightUpdates(response,desired[i],inputVector,weightMatrix[i],rate,inputs);
-        cout<<"#Neuron: "<<i;
+        weightUpdates(response,(*desired)[i],inputVector,&(weightMatrix[i]),rate,inputs);
+        cout<<"\n-Ajustando Pesos de la Neurona: "<<i<<"\n"+weightVectorToString(&(weightMatrix[i]),inputs)+"\n";
     }
 }
 
-string weightVectorToString(int *weightVector,int inputs){
+string weightVectorToString(int **weightVector,int inputs){
     string output="";
     for(int i =0;i<(inputs+1);i++)
         if(i == 0)
-            output+="Bias: "+std::to_string(weightVector[i]);
+            output+="Bias: "+to_string((*weightVector)[i]);
         else
-            output+="w("+to_string(i)+"): "+to_string(weightVector[i]);
+            output+=" Weight("+to_string(i)+"): "+to_string((*weightVector)[i]);
+    return output;
 }
 
-void weightUpdates(int response,int desired,int *inputVector,int *weightVector,int rate,int inputs){
+void weightUpdates(int response,int desired,int **inputVector,int **weightVector,int rate,int inputs){
     if(response != desired)
     {
         for(int i =0;i < (inputs+1); i++)//(inputs+1), para considerar al bias
-            weightVector[i] = weightVector[i] + desired*inputVector[i];
+            (*weightVector)[i] = (*weightVector)[i] + desired*((*inputVector)[i]);
     }
 }
 
-int outputByUnit(int *inputVector,int *weightVector,int inputs){
+int outputByUnit(int **inputVector,int **weightVector,int inputs){
     int y_out = 0;
     for(int i = 0; i<(inputs+1);i++){ //(inputs+1), para considerar al bias
-        y_out += inputVector[i]*weightVector[i];
+        y_out += ((*inputVector)[i]) * ((*weightVector)[i]);
     }
     return y_out;
 }
@@ -199,30 +213,29 @@ void printCharSelection(charSelection charSelected){
 }
 
 
-void retrieveCharSelection(charSelection charSelected, char **dotMatrix){
-    int matrixRowInit = charSelected.charHeight*(charSelected.row-1); //Equivalente en la fila de la matriz
-    int matrixRowEnd = matrixRowInit + charSelected.charHeight;//Fila final de la búsqueda
-    int matrixColInit = charSelected.charWidth*(charSelected.col-1); //Equivalente en la fila de la matriz
-    int matrixColEnd = matrixColInit + charSelected.charWidth;//Fila final de la búsqueda
+void retrieveCharSelection(charSelection *charSelected, char **dotMatrix){
+    int matrixRowInit = (*charSelected).charHeight*((*charSelected).row-1); //Equivalente en la fila de la matriz
+    int matrixRowEnd = matrixRowInit + (*charSelected).charHeight;//Fila final de la búsqueda
+    int matrixColInit = (*charSelected).charWidth*((*charSelected).col-1); //Equivalente en la fila de la matriz
+    int matrixColEnd = matrixColInit + (*charSelected).charWidth;//Fila final de la búsqueda
     int index =0; //dotVectorSize = charSelected.charWidth*charSelected.charWidth;
     
 //    charSelected.dotVector = new char[dotVectorSize];
-    for(int i = matrixRowInit; i < matrixRowEnd ; i++)
+    for(int x = matrixRowInit; x < matrixRowEnd ; x++)
     {
-        
-        for(int j=matrixColInit; j<matrixColEnd;j++)
+        for(int y=matrixColInit; y<matrixColEnd;y++)
         {
-            if(dotMatrix[i][j] == ' ')
-                charSelected.dotVector[index] = -1;
+            if(dotMatrix[x][y] == ' ')
+                (*charSelected).dotVector[index] = -1;
             else
-                charSelected.dotVector[index] = +1;
+                (*charSelected).dotVector[index] = +1;
             index++;
         }
     }
 }
 
 
-void readBMP(string filename, char** dotMatrix)
+void readBMP(string filename, char*** dotMatrix)
 {
     FILE* f = fopen(filename.c_str(), "rb");
     unsigned char header[54];
@@ -240,9 +253,9 @@ void readBMP(string filename, char** dotMatrix)
     int width = *(int*)&header[18];
     int height = *(int*)&header[22];
     //Generar la matríz dinámica
-    *dotMatrix = new char[width];
+    *dotMatrix = new char*[width];
     for(int x = 0; x<width;x++)
-        dotMatrix[x] = new char[height];
+        (*dotMatrix)[x] = new char[height];
     
     cout << "  Name: " << filename << endl;
     cout << " Width: " << width << endl;
@@ -266,9 +279,9 @@ void readBMP(string filename, char** dotMatrix)
             data[j+2] = tmp;
             //Validar si es un pixel vacío o relleno
             if(data[j] > 0 and data[j+1] > 0 and data[j+2] > 0)
-                dotMatrix[width-i-1][(int)j/3] = ' ';
+                (*dotMatrix)[width-i-1][(int)j/3] = ' ';
             else
-                dotMatrix[width-i-1][(int)j/3] = '*';
+                (*dotMatrix)[width-i-1][(int)j/3] = '*';
         }
     }
     fclose(f);
