@@ -10,21 +10,29 @@
 #include <iostream>
 #include <cstring>
 #include <string>
-using namespace std;
 
 struct charSelection{
     int row,col;
     char charDescription[5];
     int charWidth;    //{width, height}
     int charHeight;
-    char *dotVector;
+    int *dotVector;
 };
+
+using namespace std;
 
 void readBMP(string, char**);
 void bmp_vector(string);
 void retrieveCharSelection(charSelection,char**);
 void printCharSelection(charSelection);
 void freeDotMatrixMem(char**);
+void perceptronInit(int *,int **, int *, int , int);
+void trainNeuralNetwork(int *,int **,int *,int ,int ,int ,int );
+void weightUpdates(int ,int ,int *,int *,int ,int );
+int outputByUnit(int *,int *,int );
+int activationFunction(int ,int );
+void getPatternVector(charSelection ,int *,int );
+void getDesiredOutput(int *,int ,int );
 //void digitTrainingVectorInit(charSelection**,int,int);
 //void digitVectorInit(charSelection *,int,int);
 
@@ -34,54 +42,139 @@ int main(int argc, char** argv) {
     char** dotMatrix; //Para generar la matriz dinámica
     int width =32, height = 32;
     int dotVectorSize = width*height;
-    charSelection digit1= {4,1,"0",width,height,new char[dotVectorSize]},digit2= {4,2,"0",width,height,new char[dotVectorSize]},
-        digit3= {4,3,"0",width,height,new char[dotVectorSize]},digit4= {4,4,"0",width,height,new char[dotVectorSize]},
-        digit5= {4,5,"0",width,height,new char[dotVectorSize]},digit6= {4,6,"0",width,height,new char[dotVectorSize]},
-        digit7= {4,7,"0",width,height,new char[dotVectorSize]},digit8= {4,8,"0",width,height,new char[dotVectorSize]},
-        digit9= {4,9,"0",width,height,new char[dotVectorSize]},digit10= {4,10,"0",width,height,new char[dotVectorSize]};
-    charSelection charA= {5,2,"0",width,height,new char[dotVectorSize]},charB= {5,3,"0",width,height,new char[dotVectorSize]},
-        charC= {5,4,"0",width,height,new char[dotVectorSize]},charD= {5,5,"0",width,height,new char[dotVectorSize]},
-        charE= {5,6,"0",width,height,new char[dotVectorSize]},charF= {5,7,"0",width,height,new char[dotVectorSize]},
-        charG= {5,8,"0",width,height,new char[dotVectorSize]},charH= {5,9,"0",width,height,new char[dotVectorSize]},
-        charI= {5,10,"0",width,height,new char[dotVectorSize]},charJ= {5,11,"0",width,height,new char[dotVectorSize]},
-        charK= {5,12,"0",width,height,new char[dotVectorSize]},charL= {5,13,"0",width,height,new char[dotVectorSize]},
-        charM= {5,14,"0",width,height,new char[dotVectorSize]},charN= {5,15,"0",width,height,new char[dotVectorSize]},
-        charO= {5,16,"0",width,height,new char[dotVectorSize]},charP= {6,1,"0",width,height,new char[dotVectorSize]},
-        charQ= {6,2,"0",width,height,new char[dotVectorSize]},charR= {6,3,"0",width,height,new char[dotVectorSize]},
-        charS= {6,4,"0",width,height,new char[dotVectorSize]},charT= {6,5,"0",width,height,new char[dotVectorSize]},
-        charU= {6,6,"0",width,height,new char[dotVectorSize]},charV= {6,7,"0",width,height,new char[dotVectorSize]},
-        charW= {6,8,"0",width,height,new char[dotVectorSize]},charX= {6,9,"0",width,height,new char[dotVectorSize]},
-        charY= {6,10,"0",width,height,new char[dotVectorSize]},charZ= {6,11,"0",width,height,new char[dotVectorSize]};
-    charSelection char_a= {7,2,"0",width,height,new char[dotVectorSize]},char_b= {7,3,"0",width,height,new char[dotVectorSize]},
-        char_c= {7,4,"0",width,height,new char[dotVectorSize]},char_d= {7,5,"0",width,height,new char[dotVectorSize]},
-        char_e= {7,6,"0",width,height,new char[dotVectorSize]},char_f= {7,7,"0",width,height,new char[dotVectorSize]},
-        char_g= {7,8,"0",width,height,new char[dotVectorSize]},char_h= {7,9,"0",width,height,new char[dotVectorSize]},
-        char_i= {7,10,"0",width,height,new char[dotVectorSize]},char_j= {7,11,"0",width,height,new char[dotVectorSize]},
-        char_k= {7,12,"0",width,height,new char[dotVectorSize]},char_l= {7,13,"0",width,height,new char[dotVectorSize]},
-        char_m= {7,14,"0",width,height,new char[dotVectorSize]},char_n= {7,15,"0",width,height,new char[dotVectorSize]},
-        char_o= {7,16,"0",width,height,new char[dotVectorSize]},char_p= {8,1,"0",width,height,new char[dotVectorSize]},
-        char_q= {4,2,"0",width,height,new char[dotVectorSize]},char_r= {8,3,"0",width,height,new char[dotVectorSize]},
-        char_s= {4,2,"0",width,height,new char[dotVectorSize]},char_t= {8,5,"0",width,height,new char[dotVectorSize]},
-        char_u= {4,2,"0",width,height,new char[dotVectorSize]},char_v= {8,7,"0",width,height,new char[dotVectorSize]},
-        char_w= {4,2,"0",width,height,new char[dotVectorSize]},char_x= {8,9,"0",width,height,new char[dotVectorSize]},
-        char_y= {4,2,"0",width,height,new char[dotVectorSize]},char_z= {8,11,"0",width,height,new char[dotVectorSize]};
+    charSelection digit1= {4,1,"0",width,height,new int[dotVectorSize]},digit2= {4,2,"0",width,height,new int[dotVectorSize]},
+        digit3= {4,3,"0",width,height,new int[dotVectorSize]},digit4= {4,4,"0",width,height,new int[dotVectorSize]},
+        digit5= {4,5,"0",width,height,new int[dotVectorSize]},digit6= {4,6,"0",width,height,new int[dotVectorSize]},
+        digit7= {4,7,"0",width,height,new int[dotVectorSize]},digit8= {4,8,"0",width,height,new int[dotVectorSize]},
+        digit9= {4,9,"0",width,height,new int[dotVectorSize]},digit10= {4,10,"0",width,height,new int[dotVectorSize]};
+    charSelection charA= {5,2,"0",width,height,new int[dotVectorSize]},charB= {5,3,"0",width,height,new int[dotVectorSize]},
+        charC= {5,4,"0",width,height,new int[dotVectorSize]},charD= {5,5,"0",width,height,new int[dotVectorSize]},
+        charE= {5,6,"0",width,height,new int[dotVectorSize]},charF= {5,7,"0",width,height,new int[dotVectorSize]},
+        charG= {5,8,"0",width,height,new int[dotVectorSize]},charH= {5,9,"0",width,height,new int[dotVectorSize]},
+        charI= {5,10,"0",width,height,new int[dotVectorSize]},charJ= {5,11,"0",width,height,new int[dotVectorSize]},
+        charK= {5,12,"0",width,height,new int[dotVectorSize]},charL= {5,13,"0",width,height,new int[dotVectorSize]},
+        charM= {5,14,"0",width,height,new int[dotVectorSize]},charN= {5,15,"0",width,height,new int[dotVectorSize]},
+        charO= {5,16,"0",width,height,new int[dotVectorSize]},charP= {6,1,"0",width,height,new int[dotVectorSize]},
+        charQ= {6,2,"0",width,height,new int[dotVectorSize]},charR= {6,3,"0",width,height,new int[dotVectorSize]},
+        charS= {6,4,"0",width,height,new int[dotVectorSize]},charT= {6,5,"0",width,height,new int[dotVectorSize]},
+        charU= {6,6,"0",width,height,new int[dotVectorSize]},charV= {6,7,"0",width,height,new int[dotVectorSize]},
+        charW= {6,8,"0",width,height,new int[dotVectorSize]},charX= {6,9,"0",width,height,new int[dotVectorSize]},
+        charY= {6,10,"0",width,height,new int[dotVectorSize]},charZ= {6,11,"0",width,height,new int[dotVectorSize]};
+    charSelection char_a= {7,2,"0",width,height,new int[dotVectorSize]},char_b= {7,3,"0",width,height,new int[dotVectorSize]},
+        char_c= {7,4,"0",width,height,new int[dotVectorSize]},char_d= {7,5,"0",width,height,new int[dotVectorSize]},
+        char_e= {7,6,"0",width,height,new int[dotVectorSize]},char_f= {7,7,"0",width,height,new int[dotVectorSize]},
+        char_g= {7,8,"0",width,height,new int[dotVectorSize]},char_h= {7,9,"0",width,height,new int[dotVectorSize]},
+        char_i= {7,10,"0",width,height,new int[dotVectorSize]},char_j= {7,11,"0",width,height,new int[dotVectorSize]},
+        char_k= {7,12,"0",width,height,new int[dotVectorSize]},char_l= {7,13,"0",width,height,new int[dotVectorSize]},
+        char_m= {7,14,"0",width,height,new int[dotVectorSize]},char_n= {7,15,"0",width,height,new int[dotVectorSize]},
+        char_o= {7,16,"0",width,height,new int[dotVectorSize]},char_p= {8,1,"0",width,height,new int[dotVectorSize]},
+        char_q= {4,2,"0",width,height,new int[dotVectorSize]},char_r= {8,3,"0",width,height,new int[dotVectorSize]},
+        char_s= {4,2,"0",width,height,new int[dotVectorSize]},char_t= {8,5,"0",width,height,new int[dotVectorSize]},
+        char_u= {4,2,"0",width,height,new int[dotVectorSize]},char_v= {8,7,"0",width,height,new int[dotVectorSize]},
+        char_w= {4,2,"0",width,height,new int[dotVectorSize]},char_x= {8,9,"0",width,height,new int[dotVectorSize]},
+        char_y= {4,2,"0",width,height,new int[dotVectorSize]},char_z= {8,11,"0",width,height,new int[dotVectorSize]};
     charSelection * digitVector[10] = {&digit1,&digit2,&digit3,&digit4,&digit5,&digit6,&digit7,&digit8,&digit9,&digit10};
     charSelection * upperCharVector[26] = {&charA,&charB,&charC,&charD,&charE,&charF,&charG,&charH,&charI,&charJ,&
         charK,&charL,&charM,&charN,&charO,&charP,&charQ,&charR,&charS,&charT,&charU,&charV,&charW,&charX,&charY,&charZ};
     charSelection * lowerCharVector[26] = {&char_a,&char_b,&char_c,&char_d,&char_e,&char_f,&char_g,&char_h,&char_i,&char_j,
         &char_k,&char_l,&char_m,&char_n,&char_o,&char_p,&char_q,&char_r,&char_s,&char_t,&char_u,&char_v,&char_w,&char_x,&char_y,&char_z};
 
-//    string trainingImages[3] = {"Cambria","Calibri","TimesNewRoman"};
-    
     cout << "Introduce el nombre del archivo \"*.bmp\" en la ruta \"../images/\" para entrenamiento: ";
     cin >> imageName;
     fullPath+= imageName+".bmp";    //Ruta completa del archivo
+
     readBMP(fullPath, dotMatrix); //Obtener la imagen en una matriz de puntos
-    retrieveCharSelection(*(lowerCharVector[15]),dotMatrix);
-    printCharSelection(*(lowerCharVector[15]));        
+    //retrieveCharSelection(*(lowerCharVector[15]),dotMatrix);
+    //printCharSelection(*(lowerCharVector[15]));        
+
+    int **inputVector,**weightMatrix,**desired,inputs=32*32,neurons=7,rate = 1,threshold =0;
+
+    perceptronInit(*inputVector,weightMatrix,*desired,inputs,neurons);
+    
+    for(int i = 0;i < neurons;i++){
+        retrieveCharSelection(*(digitVector[i]),dotMatrix);
+        getPatternVector(*(digitVector[i]),*inputVector,inputs);
+        getDesiredOutput(*desired,neurons,i);
+        trainNeuralNetwork(*inputVector,weightMatrix,*desired,rate,inputs,neurons,threshold);
+    }
     
     return 0;
 }
+
+void perceptronInit(int *inputVector,int **weightMatrix, int *desired, int inputs, int neurons){
+    inputVector = new int[inputs+1];
+    inputVector[0] = 1; //Entrada por defecto en la primera posicion
+    weightMatrix = new int*[neurons]; 
+    for(int i = 0 ; i<neurons;i++)
+    {
+        weightMatrix[i] = new int[inputs+1]; //Considerando el bias en la primera posicion
+        for(int j = 0; j<(inputs+1);j++)
+            weightMatrix[i][j]=0;   //Inicializacion de los pesos y el bias
+    }
+    desired = new int[neurons];//Respuesta deseada en base a las clases
+}
+
+void getPatternVector(charSelection pattern,int *inputVector,int inputs){
+    for(int i =0;i<inputs;i++)  
+        inputVector[i+1] = pattern.dotVector[i];//Se omite la entrada por default (bias)
+}
+
+void getDesiredOutput(int *desired,int neurons,int current){
+    for(int i =0;i<neurons;i++)
+    {
+        if(i != current)
+            desired[i] == -1;
+        else
+            desired[i] == 1;
+        
+    }
+}
+
+void trainNeuralNetwork(int *inputVector,int **weightMatrix,int *desired,int rate,int inputs,int neurons,int threshold){
+    int y_outByUnit,response;
+    for(int i = 0; i<neurons;i++){
+        y_outByUnit = outputByUnit(inputVector,weightMatrix[i],inputs);
+        response = activationFunction(y_outByUnit,threshold);
+        weightUpdates(response,desired[i],inputVector,weightMatrix[i],rate,inputs);
+        cout<<"#Neuron: "<<i;
+    }
+}
+
+string weightVectorToString(int *weightVector,int inputs){
+    string output="";
+    for(int i =0;i<(inputs+1);i++)
+        if(i == 0)
+            output+="Bias: "+std::to_string(weightVector[i]);
+        else
+            output+="w("+to_string(i)+"): "+to_string(weightVector[i]);
+}
+
+void weightUpdates(int response,int desired,int *inputVector,int *weightVector,int rate,int inputs){
+    if(response != desired)
+    {
+        for(int i =0;i < (inputs+1); i++)//(inputs+1), para considerar al bias
+            weightVector[i] = weightVector[i] + desired*inputVector[i];
+    }
+}
+
+int outputByUnit(int *inputVector,int *weightVector,int inputs){
+    int y_out = 0;
+    for(int i = 0; i<(inputs+1);i++){ //(inputs+1), para considerar al bias
+        y_out += inputVector[i]*weightVector[i];
+    }
+    return y_out;
+}
+
+int activationFunction(int y_outByUnit,int threshold){
+    if(y_outByUnit > threshold)
+        return 1;
+    if(((-1)*threshold) <=y_outByUnit <= threshold)
+        return 0;
+    if(y_outByUnit < ((-1)*threshold))
+        return -1;
+}
+
+
 
 void freeDotMatrixMem(char** dotMatrix){
     for ( int i = 0; i < 512; i++ ) //Falta hacerlo dinámico
@@ -95,7 +188,11 @@ void printCharSelection(charSelection charSelected){
     int endDotVector = charSelected.charHeight*charSelected.charWidth;
     for(int i = 0; i<endDotVector; i++)
     {
-        cout << charSelected.dotVector[i];
+        if(charSelected.dotVector[i] == -1 )
+            cout << ' ';
+        else
+            cout << '*';
+
         if((i%charSelected.charWidth) ==0)
             cout << endl;
     }
@@ -115,8 +212,11 @@ void retrieveCharSelection(charSelection charSelected, char **dotMatrix){
         
         for(int j=matrixColInit; j<matrixColEnd;j++)
         {
-             charSelected.dotVector[index] += dotMatrix[i][j];
-             index++;
+            if(dotMatrix[i][j] == ' ')
+                charSelected.dotVector[index] = -1;
+            else
+                charSelected.dotVector[index] = +1;
+            index++;
         }
     }
 }
