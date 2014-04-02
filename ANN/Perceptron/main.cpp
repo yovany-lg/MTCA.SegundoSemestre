@@ -36,14 +36,15 @@ void retrieveCharSelection(charSelection *charSelected, char **dotMatrix);
 void printCharSelection(charSelection);
 void freeDotMatrixMem(char**);
 
-void perceptronInit(int **inputVector,int ***weightMatrix, int **desired, int inputs, int neurons);
-void trainNeuralNetwork(int **inputVector,int **weightMatrix,int **desired,int rate,int inputs,int neurons,int threshold);
-void weightUpdates(int response,int desired,int **inputVector,int **weightVector,int rate,int inputs);
+void perceptronInit(int **inputVector,int ***weightMatrix,int **desired,int **currentOutput,int inputs,int neurons);
+void trainNeuralNetwork(int **inputVector,int **weightMatrix,int **desired,int **currentOutput,int rate,int inputs,int neurons,int threshold);
+int weightUpdates(int response,int desired,int **inputVector,int **weightVector,int rate,int inputs);
 int outputByUnit(int **inputVector,int **weightVector,int inputs);
 int activationFunction(int ,int );
 void getPatternVector(charSelection *pattern,int **inputVector,int inputs);
 void getDesiredOutput(int **desired,int neurons,int current);
 string weightVectorToString(int **weightVector,int inputs);
+string vectorToString(int **vector,int size);
 //void digitTrainingVectorInit(charSelection**,int,int);
 //void digitVectorInit(charSelection *,int,int);
 
@@ -96,32 +97,38 @@ int main(int argc, char** argv) {
 
     readBMP(fullPath, &dotMatrix); //Obtener la imagen en una matriz de puntos
 
-    int *inputVector,**weightMatrix,*desired,inputs=32*32,neurons=3,learningRate = 1,threshold =0;
+    int *inputVector,**weightMatrix,*desired,*currentOutput,inputs=32*32,neurons=3,learningRate = 0.1,threshold =0;
 
-    perceptronInit(&inputVector,&weightMatrix,&desired,inputs,neurons);
+    perceptronInit(&inputVector,&weightMatrix,&desired,&currentOutput,inputs,neurons);
 
     cout<<"\n---Entrenando Red Neuronal---\n";
-
-    for(int i = 0;i < neurons;i++){
-        retrieveCharSelection(digitVector[i],dotMatrix);
-        cout<<"\n--Patron de Entrenamiento\n";
-        printCharSelection(*(digitVector[i]));
-        getPatternVector(digitVector[i],&inputVector,inputs);
-        getDesiredOutput(&desired,neurons,i);
-        trainNeuralNetwork(&inputVector,weightMatrix,&desired,learningRate,inputs,neurons,threshold);
+    for(int x =0;x<100;x++)
+    {
+        for(int i = 0;i < neurons;i++){
+            retrieveCharSelection(digitVector[i],dotMatrix);
+            cout<<"\n--Patron de Entrenamiento\n";
+            printCharSelection(*(digitVector[i]));
+            getPatternVector(digitVector[i],&inputVector,inputs);
+            getDesiredOutput(&desired,neurons,i);
+            cout<<"\n- Salida Esperada: "<<vectorToString(&desired,neurons);
+            trainNeuralNetwork(&inputVector,weightMatrix,&desired,&currentOutput,learningRate,inputs,neurons,threshold);
+            cout<<"\n- Salida Obtenida: "<<vectorToString(&currentOutput,neurons);
+        }
+//        getchar();
     }
     
     return 0;
 }
 
-void perceptronInit(int **inputVector,int ***weightMatrix, int **desired, int inputs, int neurons){
+void perceptronInit(int **inputVector,int ***weightMatrix,int **desired,int **currentOutput,int inputs,int neurons){
     *inputVector = new int[inputs+1];
     (*inputVector)[0] = 1; //Entrada por defecto en la primera posicion
     *desired = new int[neurons];//Respuesta deseada en base a las clases
+    *currentOutput = new int[neurons];//Respuesta deseada en base a las clases
     *weightMatrix = new int*[neurons]; 
     for(int i = 0 ; i<neurons;i++)
     {
-        (*desired)[i] = 0;
+        (*desired)[i] = (*currentOutput)[i] = 0;
         (*weightMatrix)[i] = new int[inputs+1]; //Considerando el bias en la primera posicion
         for(int j = 0; j<(inputs+1);j++)
             (*weightMatrix)[i][j]=0;   //Inicializacion de los pesos y el bias
@@ -143,14 +150,23 @@ void getDesiredOutput(int **desired,int neurons,int current){
     }
 }
 
-void trainNeuralNetwork(int **inputVector,int **weightMatrix,int **desired,int rate,int inputs,int neurons,int threshold){
-    int y_outByUnit,response;
+void trainNeuralNetwork(int **inputVector,int **weightMatrix,int **desired,int **currentOutput,int rate,int inputs,int neurons,int threshold){
+    int y_outByUnit;
     for(int i = 0; i<neurons;i++){
         y_outByUnit = outputByUnit(inputVector,&(weightMatrix[i]),inputs);
-        response = activationFunction(y_outByUnit,threshold);
-        weightUpdates(response,(*desired)[i],inputVector,&(weightMatrix[i]),rate,inputs);
-        cout<<"\n-Ajustando Pesos de la Neurona: "<<i<<"\n"+weightVectorToString(&(weightMatrix[i]),inputs)+"\n";
+        (*currentOutput)[i]= activationFunction(y_outByUnit,threshold);
+        if(weightUpdates((*currentOutput)[i],(*desired)[i],inputVector,&(weightMatrix[i]),rate,inputs) == 1)
+            cout<<"\n-Ajustando Pesos de la Neurona: "<<i<<"\n"+weightVectorToString(&(weightMatrix[i]),inputs)+"\n";
+        else
+            cout<<"\n-La Neurona: "<<i<<" No necesita ajustarse\n";
     }
+}
+
+string vectorToString(int **vector,int size){
+    string output="( ";
+    for(int i =0;i<size;i++)
+        output+=to_string((*vector)[i])+" ";
+    return output+")";
 }
 
 string weightVectorToString(int **weightVector,int inputs){
@@ -163,12 +179,14 @@ string weightVectorToString(int **weightVector,int inputs){
     return output;
 }
 
-void weightUpdates(int response,int desired,int **inputVector,int **weightVector,int rate,int inputs){
+int weightUpdates(int response,int desired,int **inputVector,int **weightVector,int rate,int inputs){
     if(response != desired)
     {
         for(int i =0;i < (inputs+1); i++)//(inputs+1), para considerar al bias
-            (*weightVector)[i] = (*weightVector)[i] + desired*((*inputVector)[i]);
+            (*weightVector)[i] = (*weightVector)[i] + rate*desired*((*inputVector)[i]);
+            return 1;
     }
+    return 0;
 }
 
 int outputByUnit(int **inputVector,int **weightVector,int inputs){
