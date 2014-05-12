@@ -9,19 +9,19 @@ CND_DISTDIR=dist
 # Debug configuration
 CND_PLATFORM_Debug=Cygwin-Windows
 CND_ARTIFACT_DIR_Debug=dist/Debug/Cygwin-Windows
-CND_ARTIFACT_NAME_Debug=perceptron
-CND_ARTIFACT_PATH_Debug=dist/Debug/Cygwin-Windows/perceptron
+CND_ARTIFACT_NAME_Debug=backpropagation
+CND_ARTIFACT_PATH_Debug=dist/Debug/Cygwin-Windows/backpropagation
 CND_PACKAGE_DIR_Debug=dist/Debug/Cygwin-Windows/package
-CND_PACKAGE_NAME_Debug=perceptron.tar
-CND_PACKAGE_PATH_Debug=dist/Debug/Cygwin-Windows/package/perceptron.tar
+CND_PACKAGE_NAME_Debug=backpropagation.tar
+CND_PACKAGE_PATH_Debug=dist/Debug/Cygwin-Windows/package/backpropagation.tar
 # Release configuration
 CND_PLATFORM_Release=Cygwin-Windows
 CND_ARTIFACT_DIR_Release=dist/Release/Cygwin-Windows
-CND_ARTIFACT_NAME_Release=perceptron
-CND_ARTIFACT_PATH_Release=dist/Release/Cygwin-Windows/perceptron
+CND_ARTIFACT_NAME_Release=backpropagation
+CND_ARTIFACT_PATH_Release=dist/Release/Cygwin-Windows/backpropagation
 CND_PACKAGE_DIR_Release=dist/Release/Cygwin-Windows/package
-CND_PACKAGE_NAME_Release=perceptron.tar
-CND_PACKAGE_PATH_Release=dist/Release/Cygwin-Windows/package/perceptron.tar
+CND_PACKAGE_NAME_Release=backpropagation.tar
+CND_PACKAGE_PATH_Release=dist/Release/Cygwin-Windows/package/backpropagation.tar
 #
 # include compiler specific variables
 #
