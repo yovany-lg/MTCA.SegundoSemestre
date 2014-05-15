@@ -18,18 +18,19 @@
 struct Layer{
     int neurons;
     float **weightMatrix;   //En la capa de entrada el apuntador esta a nulo
+    float **prevWeightMatrix;   //En la capa de entrada el apuntador esta a nulo
     float *outputVector;   //En la capa de entrada se apunta al vector de entrada
     float *localFields;
     float *localGradients;
     Layer *nextLayer, *prevLayer;
 };
 
-struct Pattern2{
+struct Pattern{
     float inputs[5];
     float targets[5];
 };
 
-struct Pattern{
+struct Pattern2{
     float inputs[2];
     float targets[1];
 };
@@ -44,6 +45,7 @@ template <typename T> std::string to_string(T value)
 using namespace std;
 
 void weightMatrixInit(int neurons, int inputs, float ***weightMatrix);
+void prevWeightMatrixInit(int neurons, int inputs, float ***weightMatrix);
 void addLayer(int neurons, int inputs, Layer** layersList);
 void initialize(int layers,int neurons[],Layer** layersList);
 void addInputLayer(int neurons, Layer** layersList);
@@ -53,14 +55,14 @@ float getLocalField(float **inputVector, float **weightVector, int inputs);
 float getFunctionSignal(float localField);
 float getFunctionSignal2(float localField);
 void getInputPattern(Pattern **trainingPattern, Layer** inputLayer);
-void trainingPatternsIterations(Layer** layersList, Pattern **trainingPatterns, float learningRate, int nPatterns, int iterations);
-float errorBackPropagation(Layer **outputLayer, Pattern **inputPattern, float learningRate);
+void trainingPatternsIterations(Layer** layersList, Pattern **trainingPatterns, float learningRate,float Mu, int nPatterns, int iterations);
+float errorBackPropagation(Layer **outputLayer, Pattern **inputPattern, float learningRate,float Mu);
 float getOutputLayerGradients(Layer **currentLayer, Pattern **inputPattern);
 float backPropagatedGradient(Layer **currentLayer, int currentNeuron);
 void getLocalGradients(Layer **currentLayer);
 void printWeightMatrix(int neurons, int inputs, float ***weightMatrix);
-void outputLayerWeightUpdates(Layer **outputLayer, float learningRate);
-void weightUpdates(Layer **currentLayer, float learningRate);
+void outputLayerWeightUpdates(Layer **outputLayer, float learningRate,float Mu);
+void weightUpdates(Layer **currentLayer, float learningRate,float Mu);
 string weightVectorToString(float **weightVector,int inputs);
 string vectorToString(float **vector,int size);
 /*
@@ -70,8 +72,9 @@ int main(int argc, char** argv) {
     Layer* layersList = NULL;     // layersList: Entrada <-> Oculta <-> Salida -> NULL
     
     int layers = 3;
-    int neurons[3] = {1,4,2}; // Formato Vector de neuronas [nSalida,nOculta1,nEntradas,...]
-    Pattern2 p1 = {{0.01,0.02,0.02,0.02,0.4},{0.1699,0.2762,0.2346,0.0854,0.3524}}, 
+    int neurons[3] = {5,6,5}; // Formato Vector de neuronas [nSalida,nOculta1,nEntradas,...]
+    float learningRate = 0.3,Mu = 0.8;
+    Pattern p1 = {{0.01,0.02,0.02,0.02,0.4},{0.1699,0.2762,0.2346,0.0854,0.3524}}, 
             p2 = {{0.01,0.02,0.02,0.02,1.0},{0.2599,0.3591,0.2397,0.1065,0.6190}}, 
             p3 = {{0.01,0.02,0.02,0.04,0.4},{0.3082,0.3783,0.2973,0.1846,0.3825}},
             p4 = {{0.01,0.02,0.04,0.04,1.0},{0.3879,0.4130,0.4132,0.2237,0.6677}},
@@ -82,17 +85,21 @@ int main(int argc, char** argv) {
             p9 = {{0.02,0.04,0.02,0.08,0.4},{0.5829,0.7141,0.3188,0.4167,0.4942}},
             p10 = {{0.02,0.04,0.04,0.08,1.0},{0.6158,0.8271,0.5982,0.5275,1}};
     
-    Pattern2 * trainingPatterns[10] = {&p1,&p2,&p3,&p4,&p5,&p6,&p7,&p8,&p9,&p10};
+    Pattern * trainingPatterns[10] = {&p1,&p2,&p3,&p4,&p5,&p6,&p7,&p8,&p9,&p10};
     
-    Pattern xor1 = {{0,0},{-1}}, 
+    Pattern2 xor1 = {{0,0},{-1}}, 
             xor2 = {{0,1},{1}}, 
             xor3 = {{1,0},{1}},
             xor4 = {{1,1},{-1}};
     
-    Pattern * trainingPatterns2[10] = {&xor1,&xor2,&xor3,&xor4};
+    Pattern2 * trainingPatterns2[10] = {&xor1,&xor2,&xor3,&xor4};
     
     initialize(layers,neurons,&layersList);
-    trainingPatternsIterations(&layersList,trainingPatterns2,0.1,4,2000);
+    trainingPatternsIterations(&layersList,trainingPatterns,learningRate,Mu,8,10000);
+    cout<<"\nPesos de Capa Oculta:\n";
+    printWeightMatrix(6,5,&layersList->nextLayer->weightMatrix);
+    cout<<"\nPesos de Capa de Salida:\n";
+    printWeightMatrix(5,6,&layersList->nextLayer->nextLayer->weightMatrix);
     
     return 0;
 }
@@ -116,6 +123,7 @@ void addLayer(int neurons, int inputs, Layer** layersList){
     
     newLayer->neurons = neurons;
     weightMatrixInit(neurons, inputs, &(newLayer->weightMatrix));
+    prevWeightMatrixInit(neurons, inputs, &(newLayer->prevWeightMatrix));
     newLayer->outputVector = new float[neurons];    //Vector de salida de las neuronas
     newLayer->localFields = new float[neurons];    //Vector de localFields: Entradas antes de aplicar la función de activación
     newLayer->localGradients = new float[neurons];    //Vector de gradientes locales
@@ -146,7 +154,7 @@ void addInputLayer(int neurons, Layer** layersList){
 
 //-- Inicializar Matriz de pesos
 void weightMatrixInit(int neurons, int inputs, float ***weightMatrix){
-    float randStep = (float)2/1000; //Pasos discretos
+    float randStep = 2.0/100; //Pasos discretos
     srand(time(NULL)); // seed random-number generator
     
     *weightMatrix = new float*[neurons]; 
@@ -155,26 +163,39 @@ void weightMatrixInit(int neurons, int inputs, float ***weightMatrix){
         (*weightMatrix)[i] = new float[inputs+1]; //Considerando el bias en la primera posicion
         for(int j = 0; j<(inputs+1);j++)
         {
-            float randValue = (rand() % 1000)*randStep - 1;
+            float randValue = (rand() % 100)*randStep - 1;
             (*weightMatrix)[i][j] = randValue;   //Inicializacion de los pesos y el bias        
         }
     }
     printWeightMatrix(neurons,inputs,weightMatrix);
 }
 
-void trainingPatternsIterations(Layer** layersList, Pattern **trainingPatterns, float learningRate, int nPatterns, int iterations){
+void prevWeightMatrixInit(int neurons, int inputs, float ***weightMatrix){
+    *weightMatrix = new float*[neurons]; 
+    for(int i = 0 ; i<neurons;i++)
+    {
+        (*weightMatrix)[i] = new float[inputs+1]; //Considerando el bias en la primera posicion
+        for(int j = 0; j<(inputs+1);j++)
+        {
+            (*weightMatrix)[i][j] = 0.0;   //Inicializacion de los pesos y el bias        
+        }
+    }
+//    printWeightMatrix(neurons,inputs,weightMatrix);
+}
+
+void trainingPatternsIterations(Layer** layersList, Pattern **trainingPatterns, float learningRate,float Mu, int nPatterns, int iterations){
     Layer *outputLayer = NULL;
     float globalErrorEnergy = 0;
     for(int k = 0; k < iterations; k++)//Iteraciones
     {
         for(int i = 0; i< nPatterns;i++){
             outputLayer = feedforward(&(trainingPatterns[i]),layersList);   //Retorna la dirección de la capa de salida.
-            globalErrorEnergy += errorBackPropagation(&outputLayer,&(trainingPatterns[i]),learningRate);
+            globalErrorEnergy += errorBackPropagation(&outputLayer,&(trainingPatterns[i]),learningRate,Mu);
         }
         //globalErrorEnergy = globalErrorEnergy/((float)nPatterns);
-        cout<<"-- Error Cuadratico Global en la Iteracion "+to_string(k+1)+": "<<globalErrorEnergy<<"\n\n";
+        cout<<"-- Error Cuadratico Global en la Iteracion "+to_string(k+1)+": "<<globalErrorEnergy<<"\n";
         globalErrorEnergy = 0;
-    }
+    }    
 }
 
 Layer* feedforward(Pattern **trainingPattern, Layer** layersList){
@@ -200,7 +221,7 @@ void getOutputVector(Layer** currentLayer){
     for(int i = 0; i < (*currentLayer)->neurons; i++){  //Obtener la salida por cada neurona
         //Weighted Input Signal
         localField = getLocalField(&(prevLayer->outputVector),&((*currentLayer)->weightMatrix[i]),prevLayer->neurons);
-        (*currentLayer)->outputVector[i] = getFunctionSignal2(localField);
+        (*currentLayer)->outputVector[i] = getFunctionSignal(localField);
         (*currentLayer)->localFields[i] = localField;
     }
 //    cout<<vectorToString(&((*currentLayer)->localFields), (*currentLayer)->neurons)<<"\n";    
@@ -216,7 +237,7 @@ float getLocalField(float **inputVector, float **weightVector, int inputs){
 
 //-- Aplicando la Función de Activación Sigmoide
 float getFunctionSignal(float localField){
-    return 1/(1+exp(-localField));
+    return 1.0/(1.0+exp(-localField));
 }
 
 //-- Aplicando la Función de Activación Sigmoide Bipolar
@@ -227,7 +248,7 @@ float getFunctionSignal2(float localField){
 //-- Aplicando la Derivada de la Función de Activación
 float getPrimeFunctionSignal(float localField){
     float functionSignal = getFunctionSignal(localField);
-    return functionSignal/(1-functionSignal);
+    return functionSignal*(1-functionSignal);
 }
 
 //-- Aplicando la Derivada de la Función de Activación Sigmoide Bipolar
@@ -236,16 +257,16 @@ float getPrimeFunctionSignal2(float localField){
     return (1.0/2)*(1+functionSignal)*(1-functionSignal);
 }
 
-float errorBackPropagation(Layer **outputLayer, Pattern **inputPattern, float learningRate){
+float errorBackPropagation(Layer **outputLayer, Pattern **inputPattern, float learningRate,float Mu){
     Layer *currentLayer = *outputLayer;
     float totalErrorEnergy = getOutputLayerGradients(&currentLayer, inputPattern);   //Gradientes de la capa de salida
-    outputLayerWeightUpdates(&currentLayer,learningRate);
+    outputLayerWeightUpdates(&currentLayer,learningRate,Mu);
     //printWeightMatrix();
     
     while(currentLayer->prevLayer->prevLayer != NULL){ //Miestras la capa anterior no sea la capa de entrada
         currentLayer = currentLayer->prevLayer; //Moverser una capa atrás. Ya se procesó la capa de salida
         getLocalGradients(&currentLayer);
-        weightUpdates(&currentLayer,learningRate);
+        weightUpdates(&currentLayer,learningRate,Mu);
     }
     return totalErrorEnergy;
 }
@@ -256,7 +277,7 @@ float getOutputLayerGradients(Layer **currentLayer, Pattern **inputPattern){
     for(int i = 0; i < (*currentLayer)->neurons; i++)
     {
         errorSignal = (((*inputPattern)->targets[i]) - (*currentLayer)->outputVector[i]);
-        (*currentLayer)->localGradients[i] = errorSignal*getPrimeFunctionSignal2((*currentLayer)->localFields[i]);
+        (*currentLayer)->localGradients[i] = errorSignal*getPrimeFunctionSignal((*currentLayer)->localFields[i]);
         errorEnergy = (1.0/2.0)*errorSignal*errorSignal;
         totalErrorEnergy += errorEnergy;
     }
@@ -266,7 +287,7 @@ float getOutputLayerGradients(Layer **currentLayer, Pattern **inputPattern){
 
 void getLocalGradients(Layer **currentLayer){
     for(int i = 0; i < (*currentLayer)->neurons; i++){
-        (*currentLayer)->localGradients[i] = backPropagatedGradient(currentLayer,i) * getPrimeFunctionSignal2((*currentLayer)->localFields[i]);
+        (*currentLayer)->localGradients[i] = backPropagatedGradient(currentLayer,i) * getPrimeFunctionSignal((*currentLayer)->localFields[i]);
     }
 //    cout<<vectorToString(&((*currentLayer)->localGradients), (*currentLayer)->neurons)<<"\n";    
 }
@@ -280,22 +301,41 @@ float backPropagatedGradient(Layer **currentLayer, int currentNeuron){
     return weightedGradientSum;
 }
 
-void outputLayerWeightUpdates(Layer **outputLayer, float learningRate){
+void outputLayerWeightUpdates(Layer **outputLayer, float learningRate, float Mu){
     Layer *prevLayer = (*outputLayer)->prevLayer;
     for(int i = 0; i < (*outputLayer)->neurons; i++){
-        (*outputLayer)->weightMatrix[i][0] = (*outputLayer)->weightMatrix[i][0] + learningRate*((*outputLayer)->localGradients[i]);   //Cambio de pesos en el BIAS
+        //Wjk(t+1) =Wjk(t)+a8kZj +Mu[Wjk(t)- Wjk(t- 1)]
+        (*outputLayer)->weightMatrix[i][0] = (*outputLayer)->weightMatrix[i][0] + 
+                learningRate*((*outputLayer)->localGradients[i]) + 
+                Mu*((*outputLayer)->weightMatrix[i][0] - (*outputLayer)->prevWeightMatrix[i][0]);   //Cambio de pesos en el BIAS
+        (*outputLayer)->prevWeightMatrix[i][0]=(*outputLayer)->weightMatrix[i][0];
         for(int j = 0; j < prevLayer->neurons; j++) //Entradas de la capa Anterior, el BIAS ya se procesó
-            (*outputLayer)->weightMatrix[i][j+1] = (*outputLayer)->weightMatrix[i][j+1] + learningRate*((*outputLayer)->localGradients[i])*(prevLayer->outputVector[j]);
+        {
+            (*outputLayer)->weightMatrix[i][j+1] = (*outputLayer)->weightMatrix[i][j+1] + 
+                    learningRate*((*outputLayer)->localGradients[i])*(prevLayer->outputVector[j]) + 
+                    Mu*((*outputLayer)->weightMatrix[i][j+1] - (*outputLayer)->prevWeightMatrix[i][j+1]);
+            (*outputLayer)->prevWeightMatrix[i][j+1]=(*outputLayer)->weightMatrix[i][j+1];        
+        }
+
     }
-//    printWeightMatrix((*outputLayer)->neurons,prevLayer->neurons,&((*outputLayer)->weightMatrix));
+//    printWeightMatrix((*outputLayer)->neurons,prevLayer->neurons,&((*outputLayer)->prevWeightMatrix));
 }
 
-void weightUpdates(Layer **currentLayer, float learningRate){
+void weightUpdates(Layer **currentLayer, float learningRate, float Mu){
     Layer *prevLayer = (*currentLayer)->prevLayer;
     for(int i = 0; i < (*currentLayer)->neurons; i++){
-        (*currentLayer)->weightMatrix[i][0] = (*currentLayer)->weightMatrix[i][0] + learningRate*((*currentLayer)->localGradients[i]);   //Cambio de pesos en el BIAS
+        //Wjk(t+1) =Wjk(t)+a8kZj +Mu[Wjk(t)- Wjk(t- 1)]
+        (*currentLayer)->weightMatrix[i][0] = (*currentLayer)->weightMatrix[i][0] + 
+                learningRate*((*currentLayer)->localGradients[i]) + 
+                +Mu*((*currentLayer)->weightMatrix[i][0] - (*currentLayer)->prevWeightMatrix[i][0]);   //Cambio de pesos en el BIAS
+        (*currentLayer)->prevWeightMatrix[i][0]=(*currentLayer)->weightMatrix[i][0];
         for(int j = 0; j < prevLayer->neurons; j++) //Entradas de la capa Anterior, el BIAS ya se procesó
-            (*currentLayer)->weightMatrix[i][j+1] = (*currentLayer)->weightMatrix[i][j+1] + learningRate*((*currentLayer)->localGradients[i])*(prevLayer->outputVector[j]);
+        {
+            (*currentLayer)->weightMatrix[i][j+1] = (*currentLayer)->weightMatrix[i][j+1] + 
+                    learningRate*((*currentLayer)->localGradients[i])*(prevLayer->outputVector[j])+
+                    Mu*((*currentLayer)->weightMatrix[i][j+1] - (*currentLayer)->prevWeightMatrix[i][j+1]);
+            (*currentLayer)->prevWeightMatrix[i][j+1]=(*currentLayer)->weightMatrix[i][j+1];
+        }
     }
 //    printWeightMatrix((*currentLayer)->neurons,prevLayer->neurons,&((*currentLayer)->weightMatrix));
 }
