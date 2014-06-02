@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
     
     int layers = 3;
     int neurons[3] = {5,6,5}; // Formato Vector de neuronas [nSalida,nOculta1,nEntradas,...]
-    float learningRate = 0.3,Mu = 0.8;
+    float learningRate = 0.8,Mu = 0.4;
     Pattern p1 = {{0.01,0.02,0.02,0.02,0.4},{0.1699,0.2762,0.2346,0.0854,0.3524}}, 
             p2 = {{0.01,0.02,0.02,0.02,1.0},{0.2599,0.3591,0.2397,0.1065,0.6190}}, 
             p3 = {{0.01,0.02,0.02,0.04,0.4},{0.3082,0.3783,0.2973,0.1846,0.3825}},
