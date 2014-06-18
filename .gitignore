@@ -1,3 +1,12 @@
 /IA/JavaDecisionTree/nbproject/private/
 /IA/JavaDecisionTree/build/
 /IA/JavaDecisionTree/dist/
+*.bash
+*.mk
+*.d
+*.inc
+*.mk
+*.inc
+*.d
+*.mk
+*.bash
