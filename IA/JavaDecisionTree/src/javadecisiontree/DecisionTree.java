@@ -124,6 +124,28 @@ public class DecisionTree{
         else
             return this.right.testPattern(pattern);
     }
+
+    public String testFinalPattern(List<Double> pattern){
+        if(isLeafNode()) 
+        //clase positiva, 1.0 => Maligna. Clase negativa: 2.0 => Benigna
+            if(Double.compare(decision,1.0) == 0)
+                return "Maligna";
+            else
+                return "Benigna";
+        
+        if(pattern.get(attribute) < decision)  //Menor que el umbral para el atributo actual
+            return this.left.testFinalPattern(pattern);
+        else
+            return this.right.testFinalPattern(pattern);
+    }
+    
+    public void normaliseTestPattern(Map<Integer,List<Double>> meanSDByAtt,List<Double> pattern){
+        Double normalizedValue;
+        for (int i = 0; i < pattern.size(); i++) {
+            normalizedValue = (pattern.get(i) - meanSDByAtt.get(i).get(0))/meanSDByAtt.get(i).get(1);
+            pattern.set(i, normalizedValue);
+	}
+    }
     
     public String getDotFile(){
       StringBuilder sb = new StringBuilder();

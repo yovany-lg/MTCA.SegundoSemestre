@@ -31,21 +31,22 @@ public class DTLearning {
      */
     public static void main(String[] args) throws FileNotFoundException, IOException {
         // TODO code application logic here
-//        TrainingSet trainingSet = new TrainingSet("..\\excelFiles\\11_Caracteristicas.xls", 58, 11);
-//        //System.out.println(args[0]);
-//        TrainingSet testSet = new TrainingSet("..\\excelFiles\\test.xls",1, 11);
-//        
-//        trainingSet.normalization();
-//        
-//        System.out.println(NearestNeighbor.testFinalPattern(trainingSet, testSet.trainingSet.get(0), 5));
-        
-        TrainingSet trainingSet = new TrainingSet("excelFiles\\11_Caracteristicas.xls", 58, 11);
-        
-        Double avgErrorRateKnn,avgPredictiveAccuracyKnn, avgErrorRateDT,avgPredictiveAccuracyDT;
+        TrainingSet trainingSet = new TrainingSet("..\\excelFiles\\11_Caracteristicas.xls",58,11);
+        TrainingSet testSet = new TrainingSet(args[0],1, 11);
+        trainingSet.normalization();
+//------------NN FINAL TEST
+        System.out.println(NearestNeighbor.testFinalPattern(trainingSet, testSet.trainingSet.get(0), 5));
 
-        avgErrorRateDT = CrossValidation(trainingSet,58);
-        avgPredictiveAccuracyDT = 1.0 - avgErrorRateDT;
-        System.out.println("Average Error Rate: "+avgErrorRateDT+"\nAverage Predictive Accuracy: "+avgPredictiveAccuracyDT);
+//        //System.out.println(args[0]);
+//        
+//        
+        
+        
+//        Double avgErrorRateKnn,avgPredictiveAccuracyKnn, avgErrorRateDT,avgPredictiveAccuracyDT;
+//
+//        avgErrorRateDT = CrossValidation(trainingSet,58);
+//        avgPredictiveAccuracyDT = 1.0 - avgErrorRateDT;
+//        System.out.println("Average Error Rate: "+avgErrorRateDT+"\nAverage Predictive Accuracy: "+avgPredictiveAccuracyDT);
 
 //        avgErrorRateKnn = nnCrossValidation(trainingSet, 58);
 //        avgPredictiveAccuracyKnn = 1.0 - avgErrorRateKnn;
@@ -55,8 +56,13 @@ public class DTLearning {
 //        DecisionTree rootNode = new DecisionTree();
 //        rootNode = learningAlgorithm(trainingSet);
 //        rootNode.saveTreeFile(rootNode, "decisionTree.dat");
+
+//------------DecisionTree FINAL TEST
+//        trainingSet.localDiscretisation();
 //        DecisionTree rootNode2 = new DecisionTree();
-//        rootNode2 = rootNode2.retrieveTreeFile("decisionTree.dat");
+//        rootNode2 = rootNode2.retrieveTreeFile("..\\decisionTree.dat");
+//        rootNode2.normaliseTestPattern(trainingSet.meanSDByAtt, testSet.trainingSet.get(0));
+//        System.out.println(rootNode2.testFinalPattern(testSet.trainingSet.get(0)));
         
         return;
     }
@@ -123,13 +129,15 @@ public class DTLearning {
     public static Double CrossValidation(TrainingSet trainingSet, Integer k ){
         Double validationErrorRate = 0.0;
         trainingSet.normalization();
+
+        DecisionTree rootNode;// = new DecisionTree();
+        rootNode = learningAlgorithm(trainingSet);
+//        rootNode.saveTreeFile(rootNode, "decisionTree.dat");
+        getTreeImage(rootNode,0);
         for(int fold = 1; fold <= k; fold++){
             List<TrainingSet> setPartition;//[trainingSet,validationSet]
             setPartition = trainingSet.kFoldPartition(k,fold);
-            DecisionTree rootNode;// = new DecisionTree();
-            rootNode = learningAlgorithm(setPartition.get(0));
             validationErrorRate +=rootNode.testValidationSet(setPartition.get(1));
-
         }
         
         return validationErrorRate/((double)k);
@@ -147,7 +155,7 @@ public class DTLearning {
         return validationErrorRate/((double)k);
     }
     
-    public void getTreeImage(DecisionTree rootNode,Integer fold){
+    public static void getTreeImage(DecisionTree rootNode,Integer fold){
         String file;
         file = rootNode.getDotFile();
 
@@ -173,7 +181,7 @@ public class DTLearning {
             // write any other commands you want here
             stdin.close();
             int returnCode = p.waitFor();
-            System.out.println("Return code = " + returnCode);                
+            //System.out.println("Return code = " + returnCode);                
 
 //                String command ="cmd c/ dot layoutFiles\\"+fold+"FoldTree.dot | gvpr -c -f layoutFiles\\tree.gv | neato -n -Tpng -o layoutFiles\\"+fold+"FoldTree.png";
 //                String[] commands = new String[]{"dot", "layoutFiles\\"+fold+"FoldTree.dot | gvpr -c -f layoutFiles\\tree.gv | neato -n -Tpng -o layoutFiles\\"+fold+"FoldTree.png"};
